@@ -1,0 +1,74 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"html/template"
+
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+)
+
+type ReportData struct {
+	Title string
+	Name  string
+	Items []string
+	Total float64
+}
+
+// Render HTML from file
+func renderTemplate(path string, data ReportData) (string, error) {
+	t, err := template.ParseFiles(path)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// Generate PDF (no os/exec)
+func generatePDF(html string, output string) error {
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		return err
+	}
+
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
+	pdfg.AddPage(page)
+
+	// Optional settings
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+	pdfg.Dpi.Set(300)
+
+	// Create PDF
+	if err := pdfg.Create(); err != nil {
+		return err
+	}
+
+	return pdfg.WriteFile(output)
+}
+
+func main() {
+	data := ReportData{
+		Title: "Stock Report",
+		Name:  "Karkki",
+		Items: []string{"AAPL", "GOOG", "TSLA"},
+		Total: 25000.50,
+	}
+
+	html, err := renderTemplate("temp.html", data)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := generatePDF(html, "report.pdf"); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("PDF generated successfully!")
+}
+
