@@ -3,35 +3,23 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	"os"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 )
 
-type ReportData struct {
-	Title string
-	Name  string
-	Items []string
-	Total float64
-}
-
-// Render HTML from file
-func renderTemplate(path string, data ReportData) (string, error) {
-	t, err := template.ParseFiles(path)
+// Read HTML file as string
+func readHTML(path string) (string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
-
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, data); err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
+	return string(data), nil
 }
 
-// Generate PDF (no os/exec)
+// Generate PDF
 func generatePDF(html string, output string) error {
+	wkhtmltopdf.SetPath("C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe")
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
 		return err
@@ -40,11 +28,9 @@ func generatePDF(html string, output string) error {
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
 	pdfg.AddPage(page)
 
-	// Optional settings
 	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
 	pdfg.Dpi.Set(300)
 
-	// Create PDF
 	if err := pdfg.Create(); err != nil {
 		return err
 	}
@@ -53,22 +39,18 @@ func generatePDF(html string, output string) error {
 }
 
 func main() {
-	data := ReportData{
-		Title: "Stock Report",
-		Name:  "Karkki",
-		Items: []string{"AAPL", "GOOG", "TSLA"},
-		Total: 25000.50,
-	}
 
-	html, err := renderTemplate("temp.html", data)
-	if err != nil {
-		panic(err)
-	}
+	// Agreement PDF
+	agreementHTML, _ := readHTML("agreement.html")
+	generatePDF(agreementHTML, "agreement.pdf")
 
-	if err := generatePDF(html, "report.pdf"); err != nil {
-		panic(err)
-	}
+	// QR PDF
+	qrHTML, _ := readHTML("qr.html")
+	generatePDF(qrHTML, "qr.pdf")
 
-	fmt.Println("PDF generated successfully!")
+	// Invoice PDF
+	invoiceHTML, _ := readHTML("invoice.html")
+	generatePDF(invoiceHTML, "invoice.pdf")
+
+	fmt.Println("All PDFs generated successfully!")
 }
-
