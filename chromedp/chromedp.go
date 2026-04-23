@@ -1,8 +1,7 @@
-package pdf
+package cdpdf
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -11,7 +10,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func readHTML(path string) (string, error) {
+func ReadHTML(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -19,7 +18,7 @@ func readHTML(path string) (string, error) {
 	return string(data), nil
 }
 
-func generatePDF(html string, output string) error {
+func GeneratePDF(html string, output string) error {
 
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
@@ -65,38 +64,4 @@ func generatePDF(html string, output string) error {
 	}
 
 	return os.WriteFile(output, pdfBuf, 0644)
-}
-
-func cdnew() {
-
-	os.MkdirAll("output", os.ModePerm)
-
-	invoiceHTML, err := readHTML("invoice.html")
-	if err != nil {
-		panic(err)
-	}
-	err = generatePDF(invoiceHTML, "output/invoice.pdf")
-	if err != nil {
-		panic(err)
-	}
-
-	badgeHTML, err := readHTML("badge.html")
-	if err != nil {
-		panic(err)
-	}
-	err = generatePDF(badgeHTML, "output/badge.pdf")
-	if err != nil {
-		panic(err)
-	}
-
-	agreementHTML, err := readHTML("agreement.html")
-	if err != nil {
-		panic(err)
-	}
-	err = generatePDF(agreementHTML, "output/agreement.pdf")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("✅ All PDFs generated successfully!")
 }
