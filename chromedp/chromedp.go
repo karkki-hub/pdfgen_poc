@@ -1,4 +1,4 @@
-package chromedp
+package pdf
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func generatePDF(html string, output string) error {
 	return os.WriteFile(output, pdfBuf, 0644)
 }
 
-func main() {
+func cdnew() {
 
 	os.MkdirAll("output", os.ModePerm)
 
