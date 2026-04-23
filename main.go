@@ -130,7 +130,8 @@ func main() {
 		BusinessName: "Your Business Name",
 		PhoneNumber:  "+91 12345 67890",
 		UPIHandle:    "12345 67890@yhh",
-		QRCodePath:   "qr.png", // Set to your QR image path, e.g. "qr.png"
+		//QRCodePath:   "qr.png", // Set to your QR image path, e.g. "qr.png"
+		QRContent: "upi://pay?pa=1234567890@yhh&pn=Your+Business+Name&cu=INR",
 	}
 	if err := mapdf.GenerateGPayBadge("output/badge-maroto.pdf", badgeData); err != nil {
 		log.Fatal("gpay badge:", err)

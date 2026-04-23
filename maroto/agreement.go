@@ -1,6 +1,7 @@
 package mapdf
 
 import (
+	"embed"
 	"fmt"
 
 	"github.com/johnfercher/maroto/v2"
@@ -14,8 +15,26 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/consts/border"
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
+	"github.com/johnfercher/maroto/v2/pkg/core/entity"
 	"github.com/johnfercher/maroto/v2/pkg/props"
 )
+
+// ─── Embedded fonts ────────────────────────────────────────────────────────────
+// The four DejaVu TTF files are baked into the binary at compile time.
+// Place the files in a "fonts/" subfolder next to this .go file.
+//
+//go:embed fonts/DejaVuSans.ttf fonts/DejaVuSans-Bold.ttf fonts/DejaVuSans-Oblique.ttf fonts/DejaVuSans-BoldOblique.ttf
+var fontFS embed.FS
+
+const fontFamily = "DejaVu"
+
+func mustFont(family string, style fontstyle.Type, fsPath string) *entity.CustomFont {
+	b, err := fontFS.ReadFile(fsPath)
+	if err != nil {
+		panic(fmt.Sprintf("embedded font %q not found: %v", fsPath, err))
+	}
+	return &entity.CustomFont{Family: family, Style: style, Bytes: b}
+}
 
 // ─── Shared types ──────────────────────────────────────────────────────────────
 
@@ -58,7 +77,7 @@ type FullAgreementData struct {
 	TermsConditions string
 }
 
-// ─── Shared colors ─────────────────────────────────────────────────────────────
+// ─── Colors ────────────────────────────────────────────────────────────────────
 
 var (
 	agBlack     = props.Color{Red: 20, Green: 20, Blue: 20}
@@ -89,13 +108,45 @@ func agDataCell(bg *props.Color) *props.Cell {
 	}
 }
 
+// ─── Text prop helpers ─────────────────────────────────────────────────────────
+
+func txt(size float64, style fontstyle.Type, clr *props.Color) props.Text {
+	return props.Text{Size: size, Style: style, Color: clr, Family: fontFamily}
+}
+
+func txtAlign(size float64, style fontstyle.Type, clr *props.Color, a align.Type) props.Text {
+	return props.Text{Size: size, Style: style, Color: clr, Align: a, Family: fontFamily}
+}
+
+// ─── Checkbox row ─────────────────────────────────────────────────────────────
+// U+2610 ☐ is fully supported by DejaVu Sans.
+
+func checkboxRow(leftLabel, rightLabel string) core.Row {
+	left := col.New(6).Add(text.New("\u2610  "+leftLabel, txt(9, fontstyle.Normal, &agBlack)))
+	var right core.Col
+	if rightLabel == "" {
+		right = col.New(6)
+	} else {
+		right = col.New(6).Add(text.New("\u2610  "+rightLabel, txt(9, fontstyle.Normal, &agBlack)))
+	}
+	return row.New(8).Add(col.New(1), left, right, col.New(1))
+}
+
 // ─── GenerateFullAgreement ────────────────────────────────────────────────────
+// Page 1 = Services Agreement, Page 2 = Payment Plan.
 
 func GenerateFullAgreement(path string, d FullAgreementData) error {
 	cfg := config.NewBuilder().
 		WithPageSize("A4").
 		WithLeftMargin(20).WithRightMargin(20).
 		WithTopMargin(20).WithBottomMargin(20).
+		WithCustomFonts([]*entity.CustomFont{
+			mustFont(fontFamily, fontstyle.Normal, "fonts/DejaVuSans.ttf"),
+			mustFont(fontFamily, fontstyle.Bold, "fonts/DejaVuSans-Bold.ttf"),
+			mustFont(fontFamily, fontstyle.Italic, "fonts/DejaVuSans-Oblique.ttf"),
+			mustFont(fontFamily, fontstyle.BoldItalic, "fonts/DejaVuSans-BoldOblique.ttf"),
+		}).
+		WithDefaultFont(&props.Font{Family: fontFamily, Style: fontstyle.Normal, Size: 9}).
 		Build()
 
 	m := maroto.New(cfg)
@@ -106,73 +157,62 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 	p1 := page.New()
 
 	p1.Add(
-		// State
 		row.New(8).Add(col.New(12).Add(text.New(
 			"State of "+d.State+"  ___________________",
-			props.Text{Size: 9, Color: &agGray},
+			txt(9, fontstyle.Normal, &agGray),
 		))),
-
-		// Title
 		row.New(14).Add(col.New(12).Add(text.New(
 			"SERVICES AGREEMENT",
-			props.Text{Size: 18, Style: fontstyle.Bold, Align: align.Center, Color: &agBlack},
+			txtAlign(18, fontstyle.Bold, &agBlack, align.Center),
 		))),
-
-		// Double divider
 		row.New(2).Add(col.New(12).Add(line.New(props.Line{Color: &agBlack, Thickness: 1.2}))),
 		row.New(2).Add(col.New(12).Add(line.New(props.Line{Color: &agBlack, Thickness: 0.3}))),
 		row.New(5),
-
-		// Intro
 		row.New(12).Add(col.New(12).Add(text.New(
 			fmt.Sprintf(`This Services Agreement (this "Agreement") is entered into as of the %s day of %s, 20%s, by and among/between:`,
 				d.Day, d.Month, d.Year),
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
-
-		// Service Provider
-		row.New(7).Add(col.New(2).Add(text.New("Service Provider(s):", props.Text{Size: 9, Style: fontstyle.Bold, Color: &agBlack})),
-			col.New(10).Add(text.New(d.ProviderName, props.Text{Size: 9, Color: &agBlack}))),
-		row.New(6).Add(col.New(2), col.New(10).Add(text.New(
-			d.ProviderAddress+`  (collectively "Service Provider") and`,
-			props.Text{Size: 9, Color: &agGray},
-		))),
+		row.New(7).Add(
+			col.New(3).Add(text.New("Service Provider(s):", txt(9, fontstyle.Bold, &agBlack))),
+			col.New(9).Add(text.New(d.ProviderName, txt(9, fontstyle.Normal, &agBlack))),
+		),
+		row.New(6).Add(
+			col.New(3),
+			col.New(9).Add(text.New(d.ProviderAddress+`  (collectively "Service Provider") and`, txt(9, fontstyle.Normal, &agGray))),
+		),
 		row.New(4),
-
-		// Buyer
-		row.New(7).Add(col.New(2).Add(text.New("Buyer(s):", props.Text{Size: 9, Style: fontstyle.Bold, Color: &agBlack})),
-			col.New(10).Add(text.New(d.BuyerName, props.Text{Size: 9, Color: &agBlack}))),
-		row.New(6).Add(col.New(2), col.New(10).Add(text.New(
-			d.BuyerAddress+`  (collectively "Buyer").`,
-			props.Text{Size: 9, Color: &agGray},
-		))),
+		row.New(7).Add(
+			col.New(3).Add(text.New("Buyer(s):", txt(9, fontstyle.Bold, &agBlack))),
+			col.New(9).Add(text.New(d.BuyerName, txt(9, fontstyle.Normal, &agBlack))),
+		),
+		row.New(6).Add(
+			col.New(3),
+			col.New(9).Add(text.New(d.BuyerAddress+`  (collectively "Buyer").`, txt(9, fontstyle.Normal, &agGray))),
+		),
 		row.New(4),
-
-		// Party clause
 		row.New(10).Add(col.New(12).Add(text.New(
 			`Each Service Provider and Buyer may be referred to in this Agreement individually as a "Party" and collectively as the "Parties."`,
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
-
-		// Section 1 header
 		row.New(10).Add(col.New(12).Add(text.New(
 			"1. Services. Service Provider agrees to provide and Buyer agrees to purchase the following services for the specific projects described below:",
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(3),
 	)
 
-	// ── Services table ────────────────────────────────────────────────────────
+	// Services table
 	p1.Add(
 		row.New(10).Add(
 			col.New(7).WithStyle(agHeaderCell()).Add(text.New("Description of Services",
-				props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &agWhite})),
+				txtAlign(9, fontstyle.Bold, &agWhite, align.Center))),
 			col.New(3).WithStyle(agHeaderCell()).Add(text.New("Number of Projects",
-				props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &agWhite})),
+				txtAlign(9, fontstyle.Bold, &agWhite, align.Center))),
 			col.New(2).WithStyle(agHeaderCell()).Add(text.New("Price per Project",
-				props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &agWhite})),
+				txtAlign(9, fontstyle.Bold, &agWhite, align.Center))),
 		),
 	)
 
@@ -184,49 +224,40 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 			bg = &agLightGray
 		}
 		svcRows = append(svcRows, row.New(8).Add(
-			col.New(7).WithStyle(agDataCell(bg)).Add(text.New(svc.Description,
-				props.Text{Size: 8, Color: &agBlack})),
-			col.New(3).WithStyle(agDataCell(bg)).Add(text.New(svc.NumProjects,
-				props.Text{Size: 8, Align: align.Center, Color: &agBlack})),
-			col.New(2).WithStyle(agDataCell(bg)).Add(text.New("$"+svc.PricePerProject,
-				props.Text{Size: 8, Align: align.Right, Color: &agBlack})),
+			col.New(7).WithStyle(agDataCell(bg)).Add(text.New(svc.Description, txt(8, fontstyle.Normal, &agBlack))),
+			col.New(3).WithStyle(agDataCell(bg)).Add(text.New(svc.NumProjects, txtAlign(8, fontstyle.Normal, &agBlack, align.Center))),
+			col.New(2).WithStyle(agDataCell(bg)).Add(text.New("$"+svc.PricePerProject, txtAlign(8, fontstyle.Normal, &agBlack, align.Right))),
 		))
 	}
 	p1.Add(svcRows...)
 
 	p1.Add(
 		row.New(5),
-
-		// Section 2
 		row.New(12).Add(col.New(12).Add(text.New(
 			"2. Purchase Price. Buyer will pay to Service Provider and for all obligations specified in this Agreement, if any, as the full and complete purchase price, the sum of $"+d.PurchasePrice+".",
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(3),
-		row.New(12).Add(col.New(12).Add(text.New(
-			"Unless otherwise stated, (Check one)  [ ]  Service Provider  [ ]  Buyer shall be responsible for all taxes in connection with the purchase of Services in this Agreement.",
-			props.Text{Size: 9, Color: &agBlack},
+		row.New(10).Add(col.New(12).Add(text.New(
+			"Unless otherwise stated, (Check one)  \u2610  Service Provider  \u2610  Buyer shall be responsible for all taxes in connection with the purchase of Services in this Agreement.",
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
-
-		// Section 3: Payment
 		row.New(8).Add(col.New(12).Add(text.New(
-			"3. Payment. Payment for the Services will be by: (Check on)",
-			props.Text{Size: 9, Color: &agBlack},
+			"3. Payment. Payment for the Services will be by: (Check one)",
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(3),
-
-		// Payment method checkboxes
-		row.New(7).Add(col.New(2), col.New(5).Add(text.New("[ ]  Cash", props.Text{Size: 9, Color: &agBlack})), col.New(5).Add(text.New("[ ]  Credit or debit card", props.Text{Size: 9, Color: &agBlack}))),
-		row.New(7).Add(col.New(2), col.New(5).Add(text.New("[ ]  Personal check", props.Text{Size: 9, Color: &agBlack})), col.New(5).Add(text.New("[ ]  Wire transfer", props.Text{Size: 9, Color: &agBlack}))),
-		row.New(7).Add(col.New(2), col.New(5).Add(text.New("[ ]  Cashier's check", props.Text{Size: 9, Color: &agBlack})), col.New(5).Add(text.New("[ ]  Other: _______________", props.Text{Size: 9, Color: &agBlack}))),
-		row.New(7).Add(col.New(2), col.New(5).Add(text.New("[ ]  Money order", props.Text{Size: 9, Color: &agBlack})), col.New(5)),
+		checkboxRow("Cash", "Credit or debit card"),
+		checkboxRow("Personal check", "Wire transfer"),
+		checkboxRow("Cashier's check", "Other: _______________"),
+		checkboxRow("Money order", ""),
 	)
 
 	if d.Notes != "" {
 		p1.Add(
 			row.New(5),
-			row.New(10).Add(col.New(12).Add(text.New(d.Notes, props.Text{Size: 9, Color: &agGray}))),
+			row.New(10).Add(col.New(12).Add(text.New(d.Notes, txt(9, fontstyle.Normal, &agGray)))),
 		)
 	}
 
@@ -241,24 +272,24 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 		row.New(18).Add(col.New(12).Add(text.New(
 			fmt.Sprintf(`By this contract, %s agrees to make payments to %s, hereafter known as "Lender," by the following schedule in exchange for %s. This payment schedule is enforceable by law, and the methods described below will be used in cases of delinquent payment.`,
 				d.Payer, d.Payee, d.Product),
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
 		row.New(16).Add(col.New(12).Add(text.New(
 			fmt.Sprintf(`By this agreement, it is agreed that a payment of %s will be surrendered to the Lender every %s until the total of the payment required, which is %s, has been delivered. The payment plan will take the following form:`,
 				d.AmountPerPeriod, d.Interval, d.TotalAmount),
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(3),
 	)
 
-	// ── Payment schedule table ────────────────────────────────────────────────
+	// Payment schedule table
 	p2.Add(
 		row.New(9).Add(
 			col.New(6).WithStyle(agHeaderCell()).Add(text.New("Payment Date",
-				props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &agWhite})),
+				txtAlign(9, fontstyle.Bold, &agWhite, align.Center))),
 			col.New(6).WithStyle(agHeaderCell()).Add(text.New("Amount",
-				props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &agWhite})),
+				txtAlign(9, fontstyle.Bold, &agWhite, align.Center))),
 		),
 	)
 
@@ -270,10 +301,8 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 			bg = &agLightGray
 		}
 		pmtRows = append(pmtRows, row.New(8).Add(
-			col.New(6).WithStyle(agDataCell(bg)).Add(text.New(pmt.Date,
-				props.Text{Size: 8, Align: align.Center, Color: &agBlack})),
-			col.New(6).WithStyle(agDataCell(bg)).Add(text.New(pmt.Amount,
-				props.Text{Size: 8, Align: align.Center, Color: &agBlack})),
+			col.New(6).WithStyle(agDataCell(bg)).Add(text.New(pmt.Date, txtAlign(8, fontstyle.Normal, &agBlack, align.Center))),
+			col.New(6).WithStyle(agDataCell(bg)).Add(text.New(pmt.Amount, txtAlign(8, fontstyle.Normal, &agBlack, align.Center))),
 		))
 	}
 	p2.Add(pmtRows...)
@@ -282,28 +311,27 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 		row.New(5),
 		row.New(10).Add(col.New(12).Add(text.New(
 			"These payments include any interest and other charges that may apply.",
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
 		row.New(24).Add(col.New(12).Add(text.New(
 			fmt.Sprintf(`This agreement is binding, and failure to meet its terms will allow the Lender to take certain recourse. First, late payments will incur a fee of %s every %s. Insufficient payment and bounced checks will incur a fee of %s. If payment should not be delivered at all, Lender will be entitled to %s.`,
 				d.LateFee, d.Interval, d.BounceFee, d.LenderAction),
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
 		row.New(8).Add(col.New(12).Add(text.New(
 			"In addition, the following terms and conditions apply: "+d.TermsConditions,
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(4),
 		row.New(20).Add(col.New(12).Add(text.New(
 			`By signing this agreement, all parties agree to the terms as described above. Alterations to this agreement can only be made by both parties and must be placed in writing. Both parties will receive a printed copy of this agreement, and will be responsible for upholding its terms.`,
-			props.Text{Size: 9, Color: &agBlack},
+			txt(9, fontstyle.Normal, &agBlack),
 		))),
 		row.New(10),
 	)
 
-	// ── Signature table ───────────────────────────────────────────────────────
 	// Signature lines
 	sigLine := func(label string) []core.Row {
 		return []core.Row{
@@ -313,9 +341,9 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 				col.New(3).Add(line.New(props.Line{Color: &agGray, Thickness: 0.5})),
 			),
 			row.New(7).Add(
-				col.New(8).Add(text.New("("+label+")", props.Text{Size: 8, Color: &agGray})),
+				col.New(8).Add(text.New("("+label+")", txt(8, fontstyle.Normal, &agGray))),
 				col.New(1),
-				col.New(3).Add(text.New("(Date)", props.Text{Size: 8, Color: &agGray})),
+				col.New(3).Add(text.New("(Date)", txt(8, fontstyle.Normal, &agGray))),
 			),
 			row.New(4),
 		}
