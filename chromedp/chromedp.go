@@ -1,4 +1,4 @@
-package main
+package chromedp
 
 import (
 	"context"
@@ -43,8 +43,6 @@ func generatePDF(html string, output string) error {
 	</html>`
 
 	htmlURL := "data:text/html," + url.PathEscape(formathtml)
-
-	fmt.Printf(htmlURL)
 
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(htmlURL),
