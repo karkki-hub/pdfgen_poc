@@ -14,7 +14,7 @@ func main() {
 
 	os.MkdirAll("output", os.ModePerm)
 
-	invoiceHTML, err := cdpdf.ReadHTML("invoice.html")
+	invoiceHTML, err := cdpdf.ReadHTML("chromedp/template/invoice.html")
 	if err != nil {
 		panic(err)
 	}
@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	badgeHTML, err := cdpdf.ReadHTML("badge.html")
+	badgeHTML, err := cdpdf.ReadHTML("chromedp/template/badge.html")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	agreementHTML, err := cdpdf.ReadHTML("agreement.html")
+	agreementHTML, err := cdpdf.ReadHTML("chromedp/template/agreement.html")
 	if err != nil {
 		panic(err)
 	}

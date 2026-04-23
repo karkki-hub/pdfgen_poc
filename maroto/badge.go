@@ -44,24 +44,35 @@ func GenerateGPayBadge(path string, d GPayBadgeData) error {
 
 	// ── GPay logo text ────────────────────────────────────────────────────────
 	m.AddRows(
-		row.New(14).Add(
-			col.New(12).Add(
-				// "G" in blue
-				text.New("G", props.Text{
-					Size: 20, Style: fontstyle.Bold,
-					Color: &gpayBlue, Align: align.Center,
+		row.New(12).Add(
+			col.New(3),
+			col.New(3).Add(
+				text.New("G ", props.Text{
+					Size:  20,
+					Style: fontstyle.Bold,
+					Color: &gpayBlue,
+					Align: align.Right,
 				}),
 			),
+			col.New(3).Add(
+				text.New("Pay", props.Text{
+					Size:  20,
+					Style: fontstyle.Bold,
+					Color: &bgBlack,
+					Align: align.Left,
+				}),
+			),
+			col.New(3),
 		),
 	)
-	m.AddRows(
-		row.New(8).Add(
-			col.New(12).Add(text.New("Pay", props.Text{
-				Size: 14, Style: fontstyle.Bold,
-				Color: &bgBlack, Align: align.Center,
-			})),
-		),
-	)
+	// m.AddRows(
+	// 	row.New(8).Add(
+	// 		col.New(12).Add(text.New("Pay", props.Text{
+	// 			Size: 14, Style: fontstyle.Bold,
+	// 			Color: &bgBlack, Align: align.Center,
+	// 		})),
+	// 	),
+	// )
 	m.AddRows(
 		row.New(6).Add(
 			col.New(12).Add(text.New("LogoHere", props.Text{
