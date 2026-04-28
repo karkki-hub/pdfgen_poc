@@ -351,6 +351,32 @@ func GenerateFullAgreement(path string, d FullAgreementData) error {
 	p2.Add(sigLine(d.Payer)...)
 	p2.Add(row.New(6))
 	p2.Add(sigLine(d.Payee)...)
+	p2.Add(row.New(8).Add(col.New(12).Add(text.New(
+		"This is italic.",
+		props.Text{Size: 9, Style: fontstyle.Italic, Color: &agBlack, Family: fontFamily},
+	))),
+		row.New(4), // gap
+
+		row.New(8).Add(col.New(12).Add(text.New(
+			"This is underline.",
+			props.Text{Size: 9, Style: fontstyle.Underline, Color: &agBlack, Family: fontFamily},
+		))),
+		row.New(4), // gap
+
+		// ── Bold ──────────────────────────────────────────────────────────────
+		row.New(8).Add(col.New(12).Add(text.New(
+			"This is bold.",
+			props.Text{Size: 9, Style: fontstyle.Bold, Color: &agBlack, Family: fontFamily},
+		))),
+		row.New(4), // gap
+
+		// ── Strikethrough ─────────────────────────────────────────────────────
+		// Row 1: the text itself
+		row.New(8).Add(col.New(12).Add(text.New(
+			"This is strikethrough.",
+			props.Text{Size: 9, Style: fontstyle.Normal, Color: &agBlack, Family: fontFamily},
+		))),
+	)
 
 	m.AddPages(p2)
 
