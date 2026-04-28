@@ -100,6 +100,8 @@ func main() {
 
 	fmt.Println("Generating chromedp PDF...")
 
+	now := time.Now()
+
 	invoiceHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/invoice.html", cdinvoiceData)
 	if err != nil {
 		log.Fatal("chromedp invoice template:", err)
@@ -124,7 +126,12 @@ func main() {
 		log.Fatal("chromedp agreement pdf:", err)
 	}
 
+	runtime := time.Since(now)
+	fmt.Printf("✅ chromedp PDFs generated successfully in %v!\n", runtime)
+
 	fmt.Println("Generating maroto PDF...")
+
+	nowm := time.Now()
 
 	// ── 1. Invoice ────────────────────────────────────────────────────────────
 	invoiceData := mapdf.InvoiceData{
@@ -213,14 +220,18 @@ func main() {
 		BusinessName: "Your Business Name",
 		PhoneNumber:  "+91 12345 67890",
 		UPIHandle:    "12345 67890@yhh",
-		//QRCodePath:   "qr.png", // Set to your QR image path, e.g. "qr.png"
-		QRContent: "upi://pay?pa=1234567890@yhh&pn=Your+Business+Name&cu=INR",
+		QRCodePath:   "qr.png", // Set to your QR image path, e.g. "qr.png"
+		// QRContent: "upi://pay?pa=1234567890@yhh&pn=Your+Business+Name&cu=INR",
 	}
 	if err := mapdf.GenerateGPayBadge("output/badge-maroto.pdf", badgeData); err != nil {
 		log.Fatal("gpay badge:", err)
 	}
+	runtimem := time.Since(nowm)
+	fmt.Printf("✅ maroto PDFs generated successfully in %v!\n", runtimem)
 
 	fmt.Println("Generating pdfcpu PDF...")
+
+	nowp := time.Now()
 
 	Idata := pcpdf.InvoiceData{
 		InvoiceNumber: "#123456",
@@ -305,6 +316,9 @@ func main() {
 	if err := pcpdf.GenerateAgreement("output/agreement-pdfcpu.pdf", Adata); err != nil {
 		log.Fatalf("Failed to generate agreement: %v", err)
 	}
+
+	runtimep := time.Since(nowp)
+	fmt.Printf("✅ pdfcpu PDFs generated successfully in %v!\n", runtimep)
 
 	fmt.Println("✅ All PDFs generated successfully!")
 }
