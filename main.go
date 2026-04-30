@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+
 	"time"
 
 	cdpdf "pdf_poc/chromedp"
+	gapdf "pdf_poc/gpdf"
 	mapdf "pdf_poc/maroto"
 	pcpdf "pdf_poc/pdfcpu"
 )
@@ -15,122 +17,7 @@ func main() {
 
 	os.MkdirAll("output", os.ModePerm)
 
-	cdinvoiceData := cdpdf.InvoiceData{
-		Number: "123456",
-		Date:   time.Date(2030, 5, 24, 0, 0, 0, 0, time.UTC),
-		Provider: cdpdf.PartyInfo{
-			Name:    "STUDIO SHODWE",
-			Address: "123 Anywhere St., Any City",
-			City:    "ST 12345",
-			Phone:   "+123-456-7890",
-			Email:   "hello@reallygreatsite.com",
-		},
-		Client: cdpdf.PartyInfo{
-			Name:    "Rachel Beaudry",
-			Address: "123 Anywhere St., Any City",
-			City:    "ST 12345",
-			Phone:   "+123-456-7890",
-			Email:   "hello@reallygreatsite.com",
-		},
-		Items: []cdpdf.InvoiceItem{
-			{"Service 1", 100.00, 1},
-			{"Service 2", 150.00, 1},
-			{"Service 3", 200.00, 1},
-		},
-		TaxRate: 0.06,
-		Notes:   "Payment is due within 15 days\nof receiving this invoice.",
-		PaymentMethod: cdpdf.PaymentInfo{
-			Bank:          "Borcelle Bank",
-			AccountName:   "Studio Shodwe",
-			AccountNumber: "1234567890",
-		},
-		PreparedBy: cdpdf.PreparedByInfo{
-			Name:  "Benjamin Shah",
-			Title: "Sales Administrator, Studio Shodwe",
-		},
-	}
-
-	cdbadgeData := cdpdf.GPayBadgeData{
-		BusinessName: "Your Business Name",
-		PhoneNumber:  "+91 12345 67890",
-		UPIHandle:    "12345 67890@yhh",
-		QRContent:    "upi://pay?pa=1234567890@yhh&pn=Your+Business+Name&cu=INR",
-	}
-
-	cdfullAgreement := cdpdf.FullAgreementData{
-		AgreementData: cdpdf.AgreementData{
-			State:           "California",
-			Day:             "1st",
-			Month:           "January",
-			Year:            "25",
-			ProviderName:    "Acme Services Inc.",
-			ProviderAddress: "123 Main Street, Los Angeles, CA 90001",
-			BuyerName:       "Globex Corp.",
-			BuyerAddress:    "456 Market Street, San Francisco, CA 94105",
-			Services: []cdpdf.ServiceItem{
-				{"Web Development", "2", "5,000"},
-				{"UI/UX Design", "1", "3,000"},
-				{"SEO Package", "3", "1,200"},
-				{"Maintenance (monthly)", "6", "800"},
-			},
-			PurchasePrice: "20,000",
-			Notes:         "All work will be delivered digitally. Revisions are limited to 3 rounds per project.",
-		},
-		PaymentPlanData: cdpdf.PaymentPlanData{
-			Payer:           "John Doe",
-			Payee:           "Jane Smith",
-			Product:         "Web Development Services",
-			AmountPerPeriod: "$500",
-			Interval:        "month",
-			TotalAmount:     "$3,000",
-			Payments: []cdpdf.PaymentEntry{
-				{"1 Feb 2025", "$500"},
-				{"1 Mar 2025", "$500"},
-				{"1 Apr 2025", "$500"},
-				{"1 May 2025", "$500"},
-				{"1 Jun 2025", "$500"},
-				{"1 Jul 2025", "$500"},
-			},
-			LateFee:         "$50",
-			BounceFee:       "$75",
-			LenderAction:    "contact a debt collection service",
-			TermsConditions: "No refunds after work commencement. Disputes subject to California jurisdiction.",
-		},
-	}
-
-	fmt.Println("Generating chromedp PDF...")
-
-	now := time.Now()
-
-	invoiceHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/invoice.html", cdinvoiceData)
-	if err != nil {
-		log.Fatal("chromedp invoice template:", err)
-	}
-	if err := cdpdf.GeneratePDF(invoiceHTML, "output/invoice-chromedp.pdf"); err != nil {
-		log.Fatal("chromedp invoice pdf:", err)
-	}
-
-	badgeHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/badge.html", cdbadgeData)
-	if err != nil {
-		log.Fatal("chromedp badge template:", err)
-	}
-	if err := cdpdf.GeneratePDF(badgeHTML, "output/badge-chromedp.pdf"); err != nil {
-		log.Fatal("chromedp badge pdf:", err)
-	}
-
-	agreementHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/agreement.html", cdfullAgreement)
-	if err != nil {
-		log.Fatal("chromedp agreement template:", err)
-	}
-	if err := cdpdf.GeneratePDF(agreementHTML, "output/agreement-chromedp.pdf"); err != nil {
-		log.Fatal("chromedp agreement pdf:", err)
-	}
-
-	runtime := time.Since(now)
-	fmt.Printf("✅ chromedp PDFs generated successfully in %v!\n", runtime)
-
 	fmt.Println("Generating maroto PDF...")
-
 	nowm := time.Now()
 
 	// ── 1. Invoice ────────────────────────────────────────────────────────────
@@ -319,6 +206,168 @@ func main() {
 
 	runtimep := time.Since(nowp)
 	fmt.Printf("✅ pdfcpu PDFs generated successfully in %v!\n", runtimep)
+
+	fmt.Println("Generating gpdf PDF...")
+
+	datab := gapdf.FullAgreementData{
+		// ── Page 1: Services Agreement ────────────────────────────────────────
+		State:           "California",
+		Day:             "1st",
+		Month:           "January",
+		Year:            "25",
+		ProviderName:    "Acme Services Inc.",
+		ProviderAddress: "123 Main Street, Los Angeles, CA 90001",
+		BuyerName:       "Globex Corporation",
+		BuyerAddress:    "456 Market Street, San Francisco, CA 94105",
+		Services: []gapdf.ServiceItem{
+			{Description: "Web Development", NumProjects: "2", PricePerProject: "5,000"},
+			{Description: "UI/UX Design", NumProjects: "1", PricePerProject: "3,000"},
+			{Description: "SEO Optimization", NumProjects: "3", PricePerProject: "1,200"},
+			{Description: "Monthly Maintenance", NumProjects: "6", PricePerProject: "800"},
+		},
+		PurchasePrice: "20,000",
+		Notes:         "All deliverables will be provided digitally. Revisions are limited to 3 rounds per project.",
+
+		// ── Page 2: Payment Plan ──────────────────────────────────────────────
+		Payer:           "Globex Corporation",
+		Payee:           "Acme Services Inc.",
+		Product:         "Web Development & Design Services",
+		AmountPerPeriod: "$3,334",
+		Interval:        "month",
+		TotalAmount:     "$10,000",
+		Payments: []gapdf.PaymentEntry{
+			{Date: "1 February 2025", Amount: "$3,334"},
+			{Date: "1 March 2025", Amount: "$3,334"},
+			{Date: "1 April 2025", Amount: "$3,332"},
+		},
+		LateFee:         "$50",
+		BounceFee:       "$75",
+		LenderAction:    "engage a debt collection service and pursue legal remedies",
+		TermsConditions: "No refunds after commencement of work. All disputes are subject to California jurisdiction.",
+	}
+
+	nowg := time.Now()
+
+	out := "output/agreement-gpdf.pdf"
+	if err := gapdf.GenerateFullAgreement(out, datab); err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	runtimeg := time.Since(nowg)
+	fmt.Printf("✅ gpdf PDFs generated successfully in %v!\n", runtimeg)
+
+	cdinvoiceData := cdpdf.InvoiceData{
+		Number: "123456",
+		Date:   time.Date(2030, 5, 24, 0, 0, 0, 0, time.UTC),
+		Provider: cdpdf.PartyInfo{
+			Name:    "STUDIO SHODWE",
+			Address: "123 Anywhere St., Any City",
+			City:    "ST 12345",
+			Phone:   "+123-456-7890",
+			Email:   "hello@reallygreatsite.com",
+		},
+		Client: cdpdf.PartyInfo{
+			Name:    "Rachel Beaudry",
+			Address: "123 Anywhere St., Any City",
+			City:    "ST 12345",
+			Phone:   "+123-456-7890",
+			Email:   "hello@reallygreatsite.com",
+		},
+		Items: []cdpdf.InvoiceItem{
+			{"Service 1", 100.00, 1},
+			{"Service 2", 150.00, 1},
+			{"Service 3", 200.00, 1},
+		},
+		TaxRate: 0.06,
+		Notes:   "Payment is due within 15 days\nof receiving this invoice.",
+		PaymentMethod: cdpdf.PaymentInfo{
+			Bank:          "Borcelle Bank",
+			AccountName:   "Studio Shodwe",
+			AccountNumber: "1234567890",
+		},
+		PreparedBy: cdpdf.PreparedByInfo{
+			Name:  "Benjamin Shah",
+			Title: "Sales Administrator, Studio Shodwe",
+		},
+	}
+
+	cdbadgeData := cdpdf.GPayBadgeData{
+		BusinessName: "Your Business Name",
+		PhoneNumber:  "+91 12345 67890",
+		UPIHandle:    "12345 67890@yhh",
+		QRContent:    "upi://pay?pa=1234567890@yhh&pn=Your+Business+Name&cu=INR",
+	}
+
+	cdfullAgreement := cdpdf.FullAgreementData{
+		AgreementData: cdpdf.AgreementData{
+			State:           "California",
+			Day:             "1st",
+			Month:           "January",
+			Year:            "25",
+			ProviderName:    "Acme Services Inc.",
+			ProviderAddress: "123 Main Street, Los Angeles, CA 90001",
+			BuyerName:       "Globex Corp.",
+			BuyerAddress:    "456 Market Street, San Francisco, CA 94105",
+			Services: []cdpdf.ServiceItem{
+				{"Web Development", "2", "5,000"},
+				{"UI/UX Design", "1", "3,000"},
+				{"SEO Package", "3", "1,200"},
+				{"Maintenance (monthly)", "6", "800"},
+			},
+			PurchasePrice: "20,000",
+			Notes:         "All work will be delivered digitally. Revisions are limited to 3 rounds per project.",
+		},
+		PaymentPlanData: cdpdf.PaymentPlanData{
+			Payer:           "John Doe",
+			Payee:           "Jane Smith",
+			Product:         "Web Development Services",
+			AmountPerPeriod: "$500",
+			Interval:        "month",
+			TotalAmount:     "$3,000",
+			Payments: []cdpdf.PaymentEntry{
+				{"1 Feb 2025", "$500"},
+				{"1 Mar 2025", "$500"},
+				{"1 Apr 2025", "$500"},
+				{"1 May 2025", "$500"},
+				{"1 Jun 2025", "$500"},
+				{"1 Jul 2025", "$500"},
+			},
+			LateFee:         "$50",
+			BounceFee:       "$75",
+			LenderAction:    "contact a debt collection service",
+			TermsConditions: "No refunds after work commencement. Disputes subject to California jurisdiction.",
+		},
+	}
+
+	fmt.Println("Generating chromedp PDF...")
+
+	now := time.Now()
+
+	invoiceHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/invoice.html", cdinvoiceData)
+	if err != nil {
+		log.Fatal("chromedp invoice template:", err)
+	}
+	if err := cdpdf.GeneratePDF(invoiceHTML, "output/invoice-chromedp.pdf"); err != nil {
+		log.Fatal("chromedp invoice pdf:", err)
+	}
+
+	badgeHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/badge.html", cdbadgeData)
+	if err != nil {
+		log.Fatal("chromedp badge template:", err)
+	}
+	if err := cdpdf.GeneratePDF(badgeHTML, "output/badge-chromedp.pdf"); err != nil {
+		log.Fatal("chromedp badge pdf:", err)
+	}
+
+	agreementHTML, err := cdpdf.RenderHTMLTemplate("chromedp/template/agreement.html", cdfullAgreement)
+	if err != nil {
+		log.Fatal("chromedp agreement template:", err)
+	}
+	if err := cdpdf.GeneratePDF(agreementHTML, "output/agreement-chromedp.pdf"); err != nil {
+		log.Fatal("chromedp agreement pdf:", err)
+	}
+
+	runtime := time.Since(now)
+	fmt.Printf("✅ chromedp PDFs generated successfully in %v!\n", runtime)
 
 	fmt.Println("✅ All PDFs generated successfully!")
 }
