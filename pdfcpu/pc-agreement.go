@@ -21,19 +21,18 @@ type AgreementData struct {
 	BuyerAddress    string
 	Services        []ServiceItem
 	TotalPrice      string
-	TaxResponsible  string // "Service Provider" or "Buyer"
+	TaxResponsible  string
 	PaymentMethod   string
-	// Page 2 fields
-	PayerName    string
-	PayeeName    string
-	PayerUPI     string
-	Interval     string
-	TotalAmount  string
-	PaymentDates []string
-	LateFee      string
-	BounceFee    string
-	LenderAction string
-	Terms        string
+	PayerName       string
+	PayeeName       string
+	PayerUPI        string
+	Interval        string
+	TotalAmount     string
+	PaymentDates    []string
+	LateFee         string
+	BounceFee       string
+	LenderAction    string
+	Terms           string
 }
 
 type ServiceItem struct {
@@ -42,9 +41,7 @@ type ServiceItem struct {
 	PricePerPrj string
 }
 
-// GenerateAgreement creates a two-page services agreement PDF.
 func GenerateAgreement(outPath string, data AgreementData) error {
-
 	page1 := buildAgreementPage1(data)
 	page2 := buildAgreementPage2(data)
 
@@ -57,7 +54,6 @@ func GenerateAgreement(outPath string, data AgreementData) error {
 		return err
 	}
 	defer outFile.Close()
-
 	return api.Optimize(rs, outFile, conf)
 }
 
@@ -73,7 +69,7 @@ func buildAgreementPage1(d AgreementData) string {
 		fmt.Fprintf(&buf, "BT /%s %d Tf %s rg %.2f %.2f Td (%s) Tj ET\n",
 			fontName, size, color, x, y, pdfEscape(s))
 	}
-	line := func(x1, y1, x2, y2, width float64, color string) {
+	ln := func(x1, y1, x2, y2, width float64, color string) {
 		fmt.Fprintf(&buf, "%s RG %.2f w %.2f %.2f m %.2f %.2f l S\n",
 			color, width, x1, y1, x2, y2)
 	}
@@ -87,39 +83,29 @@ func buildAgreementPage1(d AgreementData) string {
 		}
 	}
 
-	// ── State line ──────────────────────────────────────────────────────────
 	text(50, h-50, 9, false, "0 0 0", fmt.Sprintf("State of %s", d.State))
-
-	// ── Title ───────────────────────────────────────────────────────────────
 	text(160, h-75, 20, true, "0 0 0", "SERVICES AGREEMENT")
-	line(50, h-82, w-50, h-82, 2, "0 0 0")
-	line(50, h-85, w-50, h-85, 0.5, "0 0 0")
+	ln(50, h-82, w-50, h-82, 2, "0 0 0")
+	ln(50, h-85, w-50, h-85, 0.5, "0 0 0")
 
-	// ── Preamble ─────────────────────────────────────────────────────────────
 	preamble := fmt.Sprintf(
 		"This Services Agreement (this \"Agreement\") is entered into as of the %s day of %s, 20%s, by and among/between:",
 		d.Day, d.Month, d.Year[2:])
 	wrapText(&buf, preamble, 50, h-105, w-100, 9, false, "0 0 0")
 
-	// ── Service Provider ──────────────────────────────────────────────────────
 	text(50, h-140, 9, true, "0 0 0", "Service Provider(s):")
 	text(180, h-140, 9, false, "0 0 0", d.ProviderName+" [Name], located at")
 	text(50, h-154, 9, false, "0 0 0", d.ProviderAddress+` (collectively "Service Provider") and`)
-
-	// ── Buyer ────────────────────────────────────────────────────────────────
 	text(50, h-175, 9, true, "0 0 0", "Buyer(s):")
 	text(120, h-175, 9, false, "0 0 0", d.BuyerName+" [Name], located at")
 	text(50, h-189, 9, false, "0 0 0", d.BuyerAddress+` (collectively "Buyer").`)
-
 	text(50, h-210, 9, false, "0 0 0",
 		`Each Service Provider and Buyer may be referred to in this Agreement individually as a "Party" and collectively as the "Parties."`)
 
-	// ── Section 1: Services ──────────────────────────────────────────────────
 	text(50, h-235, 9, true, "0 0 0", "1. Services.")
 	text(105, h-235, 9, false, "0 0 0",
 		"Service Provider agrees to provide and Buyer agrees to purchase the following services for the specific projects described below:")
 
-	// Table header
 	tableTop := h - 265.0
 	rect(50, tableTop, w-100, 20, "0.15 0.15 0.15")
 	text(55, tableTop+6, 9, true, "1 1 1", "Description of Services")
@@ -136,21 +122,16 @@ func buildAgreementPage1(d AgreementData) string {
 		text(385, ry+5, 8, false, "0 0 0", svc.NumProjects)
 		text(475, ry+5, 8, false, "0 0 0", svc.PricePerPrj)
 	}
-	// Extra blank rows
 	for i := len(d.Services); i < 6; i++ {
 		ry := tableTop - float64(i+1)*rowH
 		if i%2 == 0 {
 			rect(50, ry, w-100, rowH, "0.97 0.97 0.97")
 		}
-		fmt.Fprintf(&buf, "0.7 0.7 0.7 RG 0.3 w %.2f %.2f m %.2f %.2f l S\n",
-			50.0, ry, w-50, ry)
+		fmt.Fprintf(&buf, "0.7 0.7 0.7 RG 0.3 w %.2f %.2f m %.2f %.2f l S\n", 50.0, ry, w-50, ry)
 	}
-
 	tableBot := tableTop - 6*rowH
-	fmt.Fprintf(&buf, "0 0 0 RG 0.5 w %.2f %.2f %.2f %.2f re S\n",
-		50.0, tableBot, w-100, tableTop-tableBot)
+	fmt.Fprintf(&buf, "0 0 0 RG 0.5 w %.2f %.2f %.2f %.2f re S\n", 50.0, tableBot, w-100, tableTop-tableBot)
 
-	// ── Section 2: Purchase Price ─────────────────────────────────────────────
 	s2y := tableBot - 30
 	text(50, s2y, 9, true, "0 0 0", "2. Purchase Price.")
 	text(145, s2y, 9, false, "0 0 0",
@@ -163,7 +144,6 @@ func buildAgreementPage1(d AgreementData) string {
 	checkbox(340, taxY-2, d.TaxResponsible == "Buyer")
 	text(352, taxY, 9, false, "0 0 0", "Buyer shall be responsible for all taxes in connection with the purchase of Services in this Agreement.")
 
-	// ── Section 3: Payment ────────────────────────────────────────────────────
 	s3y := taxY - 30
 	text(50, s3y, 9, true, "0 0 0", "3. Payment.")
 	text(105, s3y, 9, false, "0 0 0", "Payment for the Services will be by: (Check one)")
@@ -182,8 +162,7 @@ func buildAgreementPage1(d AgreementData) string {
 		text(67+col, cy2, 9, false, "0 0 0", opt)
 	}
 
-	// ── Footer ────────────────────────────────────────────────────────────────
-	line(50, 30, w-50, 30, 0.3, "0.7 0.7 0.7")
+	ln(50, 30, w-50, 30, 0.3, "0.7 0.7 0.7")
 	text(50, 18, 8, false, "0.5 0.5 0.5", "Page 1 of 2 — Services Agreement")
 
 	return buf.String()
@@ -193,6 +172,7 @@ func buildAgreementPage2(d AgreementData) string {
 	var buf bytes.Buffer
 	w, h := 595.0, 842.0
 
+	// ── text helpers ──────────────────────────────────────────────────────────
 	text := func(x, y float64, size int, bold bool, color, s string) {
 		fontName := "Helvetica"
 		if bold {
@@ -201,7 +181,13 @@ func buildAgreementPage2(d AgreementData) string {
 		fmt.Fprintf(&buf, "BT /%s %d Tf %s rg %.2f %.2f Td (%s) Tj ET\n",
 			fontName, size, color, x, y, pdfEscape(s))
 	}
-	line := func(x1, y1, x2, y2, width float64, color string) {
+	// oblique renders italic using the Helvetica-Oblique Type1 built-in.
+	// Helvetica-Oblique is registered in buildRawPDF so no extra embedding needed.
+	oblique := func(x, y float64, size int, color, s string) {
+		fmt.Fprintf(&buf, "BT /Helvetica-Oblique %d Tf %s rg %.2f %.2f Td (%s) Tj ET\n",
+			size, color, x, y, pdfEscape(s))
+	}
+	ln := func(x1, y1, x2, y2, width float64, color string) {
 		fmt.Fprintf(&buf, "%s RG %.2f w %.2f %.2f m %.2f %.2f l S\n",
 			color, width, x1, y1, x2, y2)
 	}
@@ -209,9 +195,8 @@ func buildAgreementPage2(d AgreementData) string {
 	// ── Header ────────────────────────────────────────────────────────────────
 	text(50, h-50, 9, false, "0.4 0.4 0.4",
 		fmt.Sprintf("Services Agreement (cont.) — %s & %s", d.ProviderName, d.BuyerName))
-	line(50, h-58, w-50, h-58, 0.5, "0.7 0.7 0.7")
+	ln(50, h-58, w-50, h-58, 0.5, "0.7 0.7 0.7")
 
-	// ── Payment Plan section ──────────────────────────────────────────────────
 	cy := h - 90.0
 
 	p2text := fmt.Sprintf(
@@ -229,7 +214,6 @@ func buildAgreementPage2(d AgreementData) string {
 		fmt.Sprintf("the total of the payment required, which is %s, has been delivered. The payment plan will take the following form:", d.TotalAmount))
 	cy -= 18
 
-	// Bullet list of payment dates
 	for _, pd := range d.PaymentDates {
 		fmt.Fprintf(&buf, "0 0 0 rg %.2f %.2f 3 3 re f\n", 57.0, cy+2)
 		text(65, cy, 9, false, "0 0 0", pd)
@@ -255,63 +239,148 @@ func buildAgreementPage2(d AgreementData) string {
 	body3 := "By signing this agreement, all parties agree to the terms as described above. Alterations to this agreement can only be made by both parties and must be placed in writing. Both parties will receive a printed copy of this agreement, and will be responsible for upholding its terms."
 	cy = wrapTextRet(&buf, body3, 50, cy, w-100, 9, false, "0 0 0")
 
+	// ── Styled text demo ──────────────────────────────────────────────────────
+	//
+	// Placed after body text, before signatures.
+	//
+	// ITALIC
+	//   Uses Helvetica-Oblique (PDF built-in Type1).  The oblique() helper
+	//   writes the font name directly into the BT operator.
+	//
+	// BOLD
+	//   Uses Helvetica-Bold via the existing text() helper with bold=true.
+	//
+	// STRIKETHROUGH
+	//   Step 1 — render text normally with text().
+	//   Step 2 — draw a 0.5pt rule using the pdfStrikeLine() helper from
+	//             strikethrough.go, which computes:
+	//
+	//     strikeY = baseline + size × 0.36
+	//       PDF y-axis is bottom-up.  baseline = cy (passed to text()).
+	//       Helvetica cap-height ≈ size × 0.72.
+	//       Strikethrough at 50% cap-height = size × 0.36 ABOVE baseline.
+	//       So strikeY = cy + size×0.36  (positive offset = upward in PDF).
+	//
+	//     strikeW = sum of per-character AFM advance widths
+	//       Uses the Helvetica AFM table in strikethrough.go, not a
+	//       per-glyph average.  Accurate to <0.5pt for typical strings.
+
+	cy -= 10 // breathing room
+
+	// 1. Italic
+	italicStr := "This is italic."
+	oblique(50, cy, 9, "0 0 0", italicStr)
+	cy -= 14
+
+	// 2. Bold
+	text(50, cy, 9, true, "0 0 0", "This is bold.")
+	cy -= 14
+
+	// 3. Strikethrough
+	strikeStr := "This is strikethrough."
+	text(50, cy, 9, false, "0 0 0", strikeStr)
+	pdfstrikeline(&buf, strikeStr, cy, 50, 9)
+	cy -= 14
+
 	// ── Signature lines ───────────────────────────────────────────────────────
-	sigY := cy - 50.0
-	line(50, sigY, 280, sigY, 0.5, "0 0 0")
-	line(320, sigY, 545, sigY, 0.5, "0 0 0")
+	sigY := cy - 40.0
+	ln(50, sigY, 280, sigY, 0.5, "0 0 0")
+	ln(320, sigY, 545, sigY, 0.5, "0 0 0")
 	text(50, sigY-14, 9, false, "0 0 0", fmt.Sprintf("(%s — Payer)", d.PayerName))
 	text(320, sigY-14, 9, false, "0 0 0", "(Date)")
 
 	sig2Y := sigY - 50.0
-	line(50, sig2Y, 280, sig2Y, 0.5, "0 0 0")
-	line(320, sig2Y, 545, sig2Y, 0.5, "0 0 0")
+	ln(50, sig2Y, 280, sig2Y, 0.5, "0 0 0")
+	ln(320, sig2Y, 545, sig2Y, 0.5, "0 0 0")
 	text(50, sig2Y-14, 9, false, "0 0 0", fmt.Sprintf("(%s — Payee)", d.PayeeName))
 	text(320, sig2Y-14, 9, false, "0 0 0", "(Date)")
 
-	// ── Footer ────────────────────────────────────────────────────────────────
-	line(50, 30, w-50, 30, 0.3, "0.7 0.7 0.7")
+	ln(50, 30, w-50, 30, 0.3, "0.7 0.7 0.7")
 	text(50, 18, 8, false, "0.5 0.5 0.5", "Page 2 of 2 — Services Agreement")
 
 	return buf.String()
 }
 
-// wrapText writes multi-line text by breaking at word boundaries.
+// wrapText writes word-wrapped text into buf, discarding the return value.
 func wrapText(buf *bytes.Buffer, s string, x, y, maxW float64, size int, bold bool, color string) {
 	wrapTextRet(buf, s, x, y, maxW, size, bold, color)
 }
 
-// wrapTextRet is like wrapText but returns the final y position.
+// wrapTextRet word-wraps s into buf and returns the y position after the last line.
 func wrapTextRet(buf *bytes.Buffer, s string, x, y, maxW float64, size int, bold bool, color string) float64 {
 	fontName := "Helvetica"
 	if bold {
 		fontName = "Helvetica-Bold"
 	}
-	// Rough char width for proportional font at given size
 	charW := float64(size) * 0.52
 	charsPerLine := int(maxW / charW)
 
 	words := splitWords(s)
-	line := ""
+	curLine := ""
 	curY := y
 	for _, w := range words {
-		candidate := line
+		candidate := curLine
 		if candidate != "" {
 			candidate += " "
 		}
 		candidate += w
-		if len(candidate) > charsPerLine && line != "" {
+		if len(candidate) > charsPerLine && curLine != "" {
 			fmt.Fprintf(buf, "BT /%s %d Tf %s rg %.2f %.2f Td (%s) Tj ET\n",
-				fontName, size, color, x, curY, pdfEscape(line))
+				fontName, size, color, x, curY, pdfEscape(curLine))
 			curY -= float64(size) + 3
-			line = w
+			curLine = w
 		} else {
-			line = candidate
+			curLine = candidate
 		}
 	}
-	if line != "" {
+	if curLine != "" {
 		fmt.Fprintf(buf, "BT /%s %d Tf %s rg %.2f %.2f Td (%s) Tj ET\n",
-			fontName, size, color, x, curY, pdfEscape(line))
+			fontName, size, color, x, curY, pdfEscape(curLine))
 		curY -= float64(size) + 3
 	}
 	return curY
+}
+
+func helveticaWidth(r rune, size float64) float64 {
+	afm := map[rune]float64{
+		' ': 278, '!': 278, '"': 355, '#': 556, '$': 556, '%': 889, '&': 667, '\'': 191,
+		'(': 333, ')': 333, '*': 389, '+': 584, ',': 278, '-': 333, '.': 278, '/': 278,
+		'0': 556, '1': 556, '2': 556, '3': 556, '4': 556, '5': 556, '6': 556, '7': 556,
+		'8': 556, '9': 556,
+		'A': 667, 'B': 667, 'C': 722, 'D': 722, 'E': 667, 'F': 611, 'G': 778, 'H': 722,
+		'I': 278, 'J': 500, 'K': 667, 'L': 556, 'M': 833, 'N': 722, 'O': 778, 'P': 667,
+		'Q': 778, 'R': 667, 'S': 667, 'T': 611, 'U': 722, 'V': 667, 'W': 944, 'X': 667,
+		'Y': 667, 'Z': 611,
+		'a': 556, 'b': 556, 'c': 500, 'd': 556, 'e': 556, 'f': 278, 'g': 556, 'h': 556,
+		'i': 222, 'j': 222, 'k': 500, 'l': 222, 'm': 833, 'n': 556, 'o': 556, 'p': 556,
+		'q': 556, 'r': 333, 's': 500, 't': 278, 'u': 556, 'v': 500, 'w': 722, 'x': 500, 'y': 500, 'z': 500,
+		'[': 333, '\\': 278, ']': 333, '^': 584, '_': 556, '`': 333, '{': 334, '|': 260, '}': 334, '~': 584,
+	}
+	if w, ok := afm[r]; ok {
+		return w * size / 1000.0
+	}
+	return 0
+}
+
+func helveticaStrWidth(s string, size float64) float64 {
+	var width float64
+	for _, r := range s {
+		width += helveticaWidth(r, size)
+	}
+	return width
+}
+
+func pdfstrikeline(buf *bytes.Buffer, s string, x, y float64, size int) {
+	strikey := y + float64(size)*0.36
+	strikw := helveticaStrWidth(s, float64(size))
+	fmt.Fprintf(buf, "0 0 0 RG 0.5 w %.2f %.2f m %.2f %.2f l S\n",
+		x, strikey, x+strikw, strikey)
+}
+
+func pdfunderline(buf *bytes.Buffer, s string, x, y float64, size int) {
+	underlineY := y - 1.5
+	width := helveticaStrWidth(s, float64(size))
+
+	fmt.Fprintf(buf, "0 0 0 RG 0.5 w %.2f %.2f m %.2f %.2f l S\n",
+		x, underlineY, x+width, underlineY)
 }

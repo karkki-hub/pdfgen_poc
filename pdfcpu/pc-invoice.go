@@ -190,10 +190,15 @@ func buildRawPDF(pages []string, w, h float64) string {
 	for i, cs := range pages {
 		contentObj := 3 + i*2 + 1
 		pageOffsets[i] = b.Len()
+
 		fmt.Fprintf(&b,
 			"%d 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f]\n"+
-				"   /Resources << /Font << /Helvetica << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n"+
-				"                             /Helvetica-Bold << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >>\n"+
+				"   /Resources << /Font << "+
+				"/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> "+
+				"/F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> "+
+				"/F3 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >> "+
+				"/F4 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique >> "+
+				">> >>\n"+
 				"   /Contents %d 0 R >>\nendobj\n",
 			3+i*2, w, h, contentObj)
 
